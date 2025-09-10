@@ -10,8 +10,8 @@ api_hash = os.getenv("API_HASH")
 client = TelegramClient("hr_session", api_id, api_hash)
 
 async def main():
-    group = "https://t.me/+cRpa24PglDg2OTY0"
-    target_username = "ABDoooo_abdo"
+    group = ""
+    target_username = ""
     
     count = 0
     messages_list = []

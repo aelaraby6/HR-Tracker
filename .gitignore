@@ -1,3 +1,3 @@
 # Ignore secrets
-.env
+api/.env
 hr_session.session

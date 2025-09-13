@@ -1,41 +1,29 @@
-# import os
-# from dotenv import load_dotenv
-# from telethon import TelegramClient
+from api.config import client
+from api.report_generator import export_user_messages, create_weekly_summary
+import pandas as pd
 
-# load_dotenv()
 
-# api_id = int(os.getenv("API_ID"))
-# api_hash = os.getenv("API_HASH")
+async def main():
+    group = "https://t.me/+NdpMLsrN6YllZjk0"
+    target_username = "ABDoooo_abdo"
 
-# client = TelegramClient("hr_session", api_id, api_hash)
+    # Export Excel
+    filename, count = await export_user_messages(group, target_username, client)
 
-# async def main():
-#     group = ""
-#     target_username = ""
-    
-#     count = 0
-#     messages_list = []
+    df = pd.read_excel(filename)
 
-#     async for message in client.iter_messages(group):
-#         if message.sender and message.sender.username == target_username:
-#             count += 1
-#             if message.text:
-#                 messages_list.append(message.text)
-
-#     with open("messages.txt", "w", encoding="utf-8") as f:
-#         for msg in messages_list:
-#             f.write(msg + "\n" + "-"*40 + "\n")
-
-#     print(f"messages number : @{target_username} = {count}")
-#     print("messages saved in m.txt")
-
-# with client:
-#     client.loop.run_until_complete(main())
-
-import tkinter as tk
-from ui.portal import HRTeacherPortal
+    # Generate PDF Summary
+    create_weekly_summary(df, target_username)
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = HRTeacherPortal(root)
-    root.mainloop()
+    with client:
+        client.loop.run_until_complete(main())
+
+
+# import tkinter as tk
+# from ui.portal import HRTeacherPortal
+
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     app = HRTeacherPortal(root)
+#     root.mainloop()

@@ -107,24 +107,24 @@ def create_start_page(app):
 
                 # Logo resize & position
         if logo_img_orig:
-            orig_w, orig_h = logo_img_orig.size  # الحجم الأصلي بتاع الصورة
+            orig_w, orig_h = logo_img_orig.size
 
-            # حجم مرن كنسبة
+            
             logo_w = int(w * 0.15)
             logo_h = int(h * 0.15)
 
-            # حدود الحجم
-            logo_w = max(50, min(logo_w, orig_w))   # مش هيكبر عن الأصلي
-            logo_h = max(50, min(logo_h, orig_h))   # مش هيكبر عن الأصلي
+           
+            logo_w = max(50, min(logo_w, orig_w))   
+            logo_h = max(50, min(logo_h, orig_h))  
 
-            # إعادة تحجيم بجودة عالية
+            
             logo_resized = logo_img_orig.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
             logo_imgtk = ImageTk.PhotoImage(logo_resized)
 
             logo_label.configure(image=logo_imgtk)
             logo_label.image = logo_imgtk
 
-            # مكان ثابت مرن
+        
             logo_label.place(
                 relx=1.0,
                 x=-w // 35,

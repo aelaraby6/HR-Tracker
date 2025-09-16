@@ -59,6 +59,11 @@ class HRTeacherPortal:
 
     def group_selected(self, group):
         messagebox.showinfo("Group Selected", f"You selected: {group}")
+        self.selected_group = group
+        self.show_page("mentor")
 
     def mentor_selected(self, mentor):
+        #messagebox.showinfo("Mentor Selected", f"You selected: {mentor}")
+        self.selected_mentor = mentor
         messagebox.showinfo("Mentor Selected", f"You selected: {mentor}")
+

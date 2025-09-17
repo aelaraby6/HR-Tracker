@@ -1,32 +1,31 @@
 import os
 import pandas as pd
-from api.telegram_utils import fetch_messages
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
+from api.telegram_utils import fetch_messages
+
+
 # ----- PDF SUMMARY -----
-def create_weekly_summary(df: pd.DataFrame, username: str):
+def create_summary(df: pd.DataFrame, username: str, start_date: datetime, end_date: datetime):
     reports_dir = "reports"
     os.makedirs(reports_dir, exist_ok=True)
 
-    today = datetime.today()
-    start_date = today - timedelta(days=7)
-
     df['date'] = pd.to_datetime(df['date'])
-    df_week = df[(df['date'] >= start_date) & (df['date'] <= today)]
+    df_range = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
 
-    total_msgs = len(df_week)
-    active_days = df_week['date'].dt.date.nunique()
-    daily_counts = df_week.groupby(df_week['date'].dt.date).size()
+    total_msgs = len(df_range)
+    active_days = df_range['date'].dt.date.nunique()
+    daily_counts = df_range.groupby(df_range['date'].dt.date).size()
     most_active_day = daily_counts.idxmax() if not daily_counts.empty else "N/A"
 
     # ----- Chart -----
     plt.figure(figsize=(6, 4))
     daily_counts.plot(kind="bar")
-    plt.title(f"Messages per Day (@{username}) - Last 7 Days")
+    plt.title(f"Messages per Day (@{username})\n{start_date.date()} → {end_date.date()}")
     plt.xlabel("Date")
     plt.ylabel("Messages")
     chart_path = os.path.join(reports_dir, f"chart_{username}.png")
@@ -35,14 +34,14 @@ def create_weekly_summary(df: pd.DataFrame, username: str):
     plt.close()
 
     # ----- PDF -----
-    filename = os.path.join(reports_dir, f"summary_{username}_{today.strftime('%Y-%m-%d')}.pdf")
+    filename = os.path.join(reports_dir, f"summary_{username}_{start_date.date()}_{end_date.date()}.pdf")
     c = canvas.Canvas(filename, pagesize=A4)
 
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, 800, f"Weekly Summary Report - @{username}")
+    c.drawString(50, 800, f"Summary Report - @{username}")
 
     c.setFont("Helvetica", 12)
-    c.drawString(50, 780, f"Period: {start_date.date()} → {today.date()}")
+    c.drawString(50, 780, f"Period: {start_date.date()} → {end_date.date()}")
     c.drawString(50, 760, f"Total Messages: {total_msgs}")
     c.drawString(50, 740, f"Active Days: {active_days}")
     c.drawString(50, 720, f"Most Active Day: {most_active_day}")
@@ -51,18 +50,18 @@ def create_weekly_summary(df: pd.DataFrame, username: str):
         c.drawImage(ImageReader(chart_path), 50, 450, width=500, height=250)
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawString(50, 420, f"Generated on: {today.strftime('%Y-%m-%d %H:%M:%S')}")
+    c.drawString(50, 420, f"Generated on: {datetime.today().strftime('%Y-%m-%d %H:%M:%S')}")
 
     c.save()
-    os.remove(chart_path) 
+    os.remove(chart_path)
 
-    print(f" PDF Summary saved: {filename}")
+    print(f"[+] PDF Summary saved: {filename}")
     return filename
 
 
-# Excel Report
-async def export_user_messages(group: str, target_username: str, client):
-    count, messages_list = await fetch_messages(group, target_username)
+# ----- Excel Report -----
+async def export_user_messages(group: str, target_username: str, client, start_date: datetime, end_date: datetime):
+    count, messages_list = await fetch_messages(group, target_username, start_date, end_date)
 
     data = []
     for msg in messages_list:
@@ -76,10 +75,10 @@ async def export_user_messages(group: str, target_username: str, client):
     df = pd.DataFrame(data)
 
     reports_dir = "reports"
-    os.makedirs(reports_dir, exist_ok=True) 
+    os.makedirs(reports_dir, exist_ok=True)
 
-    filename = os.path.join(reports_dir, f"messages_{target_username}.xlsx")
+    filename = os.path.join(reports_dir, f"messages_{target_username}_{start_date.date()}_{end_date.date()}.xlsx")
     df.to_excel(filename, index=False)
 
-    print(f"Saved {count} messages for @{target_username} -> {filename}")
-    return filename, count
+    print(f"[+] Saved {count} messages for @{target_username} from {start_date.date()} to {end_date.date()} -> {filename}")
+    return filename, count, df

@@ -1,7 +1,7 @@
 # Handles main app setup and switching between pages.
 import tkinter as tk
-from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
+from tkinter import ttk, messagebox
 import os
 
 from ui.pages.start_page import create_start_page
@@ -29,12 +29,22 @@ class HRTeacherPortal:
         self.background_color = '#3533cd'
         self.text_color = 'white'
 
-        # Logo
-        self.logo_img = None
+        # ---------- Logo for Title Bar ----------
+        png_path = "assets/logo.png"
+        ico_path = "assets/logo.ico"
+
         try:
-            self.logo_img = ImageTk.PhotoImage(Image.open("assets/logo.png").resize((80, 80)))
-        except:
-            print("Logo image not found. Using placeholder.")
+            
+            if not os.path.exists(ico_path):
+                img = Image.open(png_path)
+                img.save(ico_path, format="ICO")
+
+            # Use ico as window icon
+            self.root.iconbitmap(ico_path)
+
+        except Exception as e:
+            print("Logo icon not found:", e)
+        # ----------------------------------------
 
         # Create pages
         self.start_frame = create_start_page(self)
@@ -65,5 +75,3 @@ class HRTeacherPortal:
     def mentor_selected(self, mentor):
         messagebox.showinfo("Mentor Selected", f"You selected: {mentor}")
         self.selected_mentor = mentor
-        
-

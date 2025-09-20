@@ -63,7 +63,7 @@ class HRTeacherPortal:
         self.show_page("mentor")
 
     def mentor_selected(self, mentor):
-        #messagebox.showinfo("Mentor Selected", f"You selected: {mentor}")
-        self.selected_mentor = mentor
         messagebox.showinfo("Mentor Selected", f"You selected: {mentor}")
+        self.selected_mentor = mentor
+        
 

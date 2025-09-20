@@ -60,15 +60,16 @@ def create_start_page(app):
 
     start_btn.bind("<Button-1>", on_click)
 
-    # Footer
+    # Footer (bottom-right)
     footer = tk.Label(
         frame,
         text="ICPC Zagazig University",
-        font=("Century Gothic", 14, "italic"),
+        font=("Brush Script MT", 22, "italic"),
         fg="white",
         bg="#0b0b23"
+           
     )
-    footer.pack(side="bottom")
+    footer.place(relx=1.0, rely=1.0, x=-15, y=-10, anchor="se")  # Bottom-right corner
 
     # Logo placeholder
     logo_label = tk.Label(frame, bg="#0b0b23")
@@ -105,26 +106,22 @@ def create_start_page(app):
         start_btn.image = btn_imgtk
         start_btn.place(relx=0.5, rely=0.5, anchor="center")
 
-                # Logo resize & position
+        # Logo resize & position
         if logo_img_orig:
             orig_w, orig_h = logo_img_orig.size
 
-            
             logo_w = int(w * 0.15)
             logo_h = int(h * 0.15)
 
-           
             logo_w = max(50, min(logo_w, orig_w))   
             logo_h = max(50, min(logo_h, orig_h))  
 
-            
             logo_resized = logo_img_orig.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
             logo_imgtk = ImageTk.PhotoImage(logo_resized)
 
             logo_label.configure(image=logo_imgtk)
             logo_label.image = logo_imgtk
 
-        
             logo_label.place(
                 relx=1.0,
                 x=-w // 35,
@@ -132,10 +129,9 @@ def create_start_page(app):
                 anchor="ne"
             )
 
-        # Footer size & padding
-        new_font_size = max(12, w // 55)
-        footer.configure(font=("Century Gothic", new_font_size, "italic"))
-        footer.pack_configure(pady=h // 40)
+        # Footer resize
+        new_font_size = max(14, w // 45)
+        footer.configure(font=("Great Vibes", new_font_size, "italic"))
 
     frame.bind("<Configure>", resize_elements)
 

@@ -67,9 +67,9 @@ def create_group_page(app):
 
     groups = [
         ("#2E2EFF", "Technical Team"),
-        ("#0040AA", "Level 0 Trainning"),
-        ("#4A7BFF", "Level 1 Trainning")
-    ]
+        ("#0040AA", "Level 0 Training"),
+        ("#4A7BFF", "Level 1 Training"),
+        ("#89CFF0", "Level 2 Training") ]
 
     buttons = []
 
@@ -89,9 +89,10 @@ def create_group_page(app):
     footer = tk.Label(
         frame,
         text="ICPC Zagazig University",
-        font=("Century Gothic", 14, "italic"),
+        font=("Caveat", 14, "italic"),
         fg="white",
-        bg="#0b0b23"
+        bg="#0b0b23",
+        anchor="e"
     )
     footer.pack(side="bottom")
 

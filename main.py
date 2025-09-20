@@ -1,19 +1,22 @@
-from api.config import client
-from api.report_generator import export_user_messages, create_weekly_summary
+from datetime import datetime, timedelta
 import pandas as pd
+
+from api.config import client
+from api.report_generator import export_user_messages, create_summary
 
 
 async def main():
     group = "https://t.me/+NdpMLsrN6YllZjk0"
     target_username = "ABDoooo_abdo"
 
-    # Export Excel
-    filename, count = await export_user_messages(group, target_username, client)
+    end_date = datetime.today()
+    start_date = end_date - timedelta(days=7)
 
-    df = pd.read_excel(filename)
+    filename, count, df = await export_user_messages(group, target_username, client, start_date, end_date)
 
     # Generate PDF Summary
-    create_weekly_summary(df, target_username)
+    create_summary(df, target_username, start_date, end_date)
+
 
 if __name__ == "__main__":
     with client:
@@ -24,6 +27,6 @@ if __name__ == "__main__":
 # from ui.portal import HRTeacherPortal
 
 # if __name__ == "__main__":
-#     root = tk.Tk()
-#     app = HRTeacherPortal(root)
-#     root.mainloop()
+#         root = tk.Tk()
+#         app = HRTeacherPortal(root)
+#         root.mainloop()

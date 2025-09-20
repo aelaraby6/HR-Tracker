@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect('db')
+conn = sqlite3.connect('mentor_bot.db')
 cursor = conn.cursor()
 
 #Groups
@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS groups (
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
-    username TEXT,
-    telegram_id TEXT NOT NULL,
+    username TEXT NOT NULL,
     full_name TEXT NOT NULL
 )
 ''')

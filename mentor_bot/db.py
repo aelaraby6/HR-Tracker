@@ -62,3 +62,20 @@ def get_all_groups():
         return []
     finally:
         conn.close()
+        
+def get_mentor_by_name(name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            SELECT user_id, username, full_name 
+            FROM users 
+            WHERE full_name LIKE ? OR username LIKE ?
+        ''', (f'%{name}%', f'%{name}%'))
+        mentors = cursor.fetchall()
+        return mentors
+    except Exception as e:
+        print(f"Error searching mentors: {e}")
+        return []
+    finally:
+        conn.close()

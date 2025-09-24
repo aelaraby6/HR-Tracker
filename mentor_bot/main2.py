@@ -1,5 +1,5 @@
 
-from db import add_mentor, add_group, get_all_mentors, get_all_groups
+from db import add_mentor, add_group, get_all_mentors, get_all_groups, get_mentor_by_name
 
 def add_all_mentors():
     mentors = [
@@ -46,6 +46,17 @@ def add_all_groups():
     for group_id, group_name, telegram_id in groups:
         add_group(group_id, group_name, telegram_id)
 
+def search_mentor():
+    name = input("Enter mentor name to search: ")
+    mentors = get_mentor_by_name(name)
+    
+    if mentors:
+        print(f"\nFound {len(mentors)} mentor(s):")
+        for mentor in mentors:
+            print(f"ID: {mentor[0]} | Name: {mentor[2]} | Username: @{mentor[1]}")
+    else:
+        print("No mentors found with that name.")
+
 if __name__ == "__main__":
     print("Starting data insertion...")
     
@@ -68,3 +79,6 @@ if __name__ == "__main__":
     print(f"\nCompleted successfully!")
     print(f"Total mentors: {len(mentors)}")
     print(f"Total groups: {len(groups)}")
+    
+    print("\n" + "="*50)
+    search_mentor()

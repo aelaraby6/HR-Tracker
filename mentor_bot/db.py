@@ -79,3 +79,21 @@ def get_mentor_by_name(name):
         return []
     finally:
         conn.close()
+
+def get_group_by_name(group_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+        SELECT group_id, group_name, telegram_id 
+        FROM groups 
+        WHERE group_name LIKE ?
+        ''', (f'%{group_name}%',))
+        group = cursor.fetchone()
+        return group
+    except Exception as e:
+        print(f"Error searching group: {e}")
+        return None
+    finally:
+        conn.close()
+

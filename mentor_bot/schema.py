@@ -3,7 +3,7 @@ import sqlite3
 conn = sqlite3.connect('mentor_bot.db')
 cursor = conn.cursor()
 
-#Groups
+# Groups
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS groups (
     group_id INTEGER PRIMARY KEY,
@@ -13,16 +13,19 @@ CREATE TABLE IF NOT EXISTS groups (
 )
 ''')
 
-#Users
+# Users
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
     username TEXT NOT NULL,
-    full_name TEXT NOT NULL
+    full_name TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'mentor', -- mentor or student
+    group_id INTEGER,
+    FOREIGN KEY (group_id) REFERENCES groups (group_id)
 )
 ''')
 
-#Message
+# Messages
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS messages (
     message_id INTEGER PRIMARY KEY,
@@ -35,7 +38,7 @@ CREATE TABLE IF NOT EXISTS messages (
 )
 ''')
 
-#Reports
+# Reports
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS reports (
     report_id INTEGER PRIMARY KEY,
@@ -53,4 +56,4 @@ CREATE TABLE IF NOT EXISTS reports (
 conn.commit()
 conn.close()
 
-print("Done")
+print("Database schema created successfully!")

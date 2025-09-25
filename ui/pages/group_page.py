@@ -10,7 +10,7 @@ def create_gradient_button(width, height, color1, color2, radius=40):
 
     # Shadow
     draw_shadow.rounded_rectangle(
-        [(5, 5), (width, height)],
+        [(5, 5), (width + 5, height + 5)],  # Fixed coordinates
         radius=radius,
         fill=(0, 0, 0, 100)
     )
@@ -22,8 +22,9 @@ def create_gradient_button(width, height, color1, color2, radius=40):
     top = Image.new("RGB", (width, height), color2)
     mask = Image.new("L", (width, height))
     mask_data = []
-    for x in range(width):
-        mask_data.extend([int(255 * (x / width))] * height)
+    for y in range(height):
+        for x in range(width):
+            mask_data.append(int(255 * (x / width)))
     mask.putdata(mask_data)
     gradient.paste(top, (0, 0), mask)
 
@@ -33,7 +34,7 @@ def create_gradient_button(width, height, color1, color2, radius=40):
     draw_mask.rounded_rectangle([(0, 0), (width, height)], radius=radius, fill=255)
 
     gradient.putalpha(mask_round)
-    img.paste(gradient, (5, 0), gradient)
+    img.paste(gradient, (5, 5), gradient)  # Fixed positioning
 
     return img
 
@@ -44,12 +45,12 @@ def create_group_page(app):
     # Title
     title = tk.Label(
         frame,
-        text="HR Tracher",
+        text="HR Tracker",
         font=("Archivo Black", 40, "bold"),
         fg="#a9c7ff",
         bg="#0b0b23"
     )
-    title.pack()
+    title.pack(pady=(50, 20))
 
     # Subtitle
     subtitle = tk.Label(
@@ -69,7 +70,8 @@ def create_group_page(app):
         ("#2E2EFF", "Technical Team"),
         ("#0040AA", "Level 0 Training"),
         ("#4A7BFF", "Level 1 Training"),
-        ("#89CFF0", "Level 2 Training") ]
+        ("#89CFF0", "Level 2 Training")
+    ]
 
     buttons = []
 
@@ -80,8 +82,8 @@ def create_group_page(app):
         # Save button info
         buttons.append((btn_label, circle_color, text))
 
-        def make_handler(g=text):
-            return lambda e: app.group_selected(g)
+        def make_handler(selected_group=text):
+            return lambda e: app.group_selected(selected_group)
 
         btn_label.bind("<Button-1>", make_handler())
 
@@ -91,14 +93,13 @@ def create_group_page(app):
         text="ICPC Zagazig University",
         font=("Caveat", 14, "italic"),
         fg="white",
-        bg="#0b0b23",
-        anchor="e"
+        bg="#0b0b23"
     )
-    footer.pack(side="bottom")
+    footer.pack(side="bottom", pady=20)
 
     # Logo placeholder
     logo_label = tk.Label(frame, bg="#0b0b23")
-    logo_label.place(relx=1.0, anchor="ne")
+    logo_label.place(relx=1.0, rely=0.0, anchor="ne")
 
     # Load logo once (original)
     try:
@@ -107,8 +108,12 @@ def create_group_page(app):
         print("Logo not found:", e)
         logo_img_orig = None
 
-    def resize_elements(event):
-        w, h = event.width, event.height
+    def resize_elements(event=None):
+        if not event:
+            # Initial resize
+            w, h = 1000, 700  # Default size
+        else:
+            w, h = event.width, event.height
 
         # Title resize
         title_font_size = max(20, w // 20)
@@ -118,47 +123,49 @@ def create_group_page(app):
         # Subtitle resize
         subtitle_font_size = max(12, w // 45)
         subtitle.configure(font=("Arial", subtitle_font_size, "bold"))
-        subtitle.pack_configure(pady=h // 40)
 
         # Buttons resize
-        btn_w = int(w * 0.35)
-        btn_h = int(h * 0.1)
+        btn_w = max(300, int(w * 0.35))  # Minimum width
+        btn_h = max(60, int(h * 0.1))    # Minimum height
 
         for btn_label, circle_color, text in buttons:
-            btn_img = create_gradient_button(btn_w, btn_h, "#ffffff", "#ffffff")
+            # Create gradient button
+            btn_img = create_gradient_button(btn_w, btn_h, "#ffffff", "#f0f0f0")
             btn_imgtk = ImageTk.PhotoImage(btn_img)
 
-            # Add circle at left
-            circle_size = btn_h - 10
+            # Create circle
+            circle_size = btn_h - 20
             circle = Image.new("RGBA", (circle_size, circle_size), (0, 0, 0, 0))
             draw = ImageDraw.Draw(circle)
             draw.ellipse([0, 0, circle_size, circle_size], fill=circle_color)
 
-            btn_with_circle = Image.new("RGBA", (btn_img.width, btn_img.height), (0, 0, 0, 0))
-            btn_with_circle.paste(btn_img, (0, 0), btn_img)
-            btn_with_circle.paste(circle, (10, 5), circle)
+            # Combine button and circle
+            combined_img = Image.new("RGBA", (btn_img.width, btn_img.height), (0, 0, 0, 0))
+            combined_img.paste(btn_img, (0, 0))
+            
+            # Paste circle onto the button
+            circle_x = 15
+            circle_y = (btn_img.height - circle_size) // 2
+            combined_img.paste(circle, (circle_x, circle_y), circle)
 
-            final_imgtk = ImageTk.PhotoImage(btn_with_circle)
+            final_imgtk = ImageTk.PhotoImage(combined_img)
 
             btn_label.configure(
                 image=final_imgtk,
                 text=text,
                 font=("Archivo Black", max(14, btn_h // 4), "bold"),
                 compound="center",
-                fg="black"
+                fg="black",
+                bd=0
             )
             btn_label.image = final_imgtk
 
         # Logo resize
         if logo_img_orig:
-            orig_w, orig_h = logo_img_orig.size
-
-            logo_w = int(w * 0.15)
-            logo_h = int(h * 0.15)
-            logo_w = max(50, min(logo_w, orig_w))
-            logo_h = max(50, min(logo_h, orig_h))
-
-            logo_resized = logo_img_orig.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
+            logo_size = min(int(w * 0.15), int(h * 0.15))
+            logo_size = max(50, logo_size)  # Minimum size
+            
+            logo_resized = logo_img_orig.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
             logo_imgtk = ImageTk.PhotoImage(logo_resized)
 
             logo_label.configure(image=logo_imgtk)
@@ -166,16 +173,18 @@ def create_group_page(app):
 
             logo_label.place(
                 relx=1.0,
-                x=-w // 35,
-                y=h // 45,
+                rely=0.0,
+                x=-20,
+                y=20,
                 anchor="ne"
             )
 
         # Footer resize
-        new_font_size = max(12, w // 55)
-        footer.configure(font=("Century Gothic", new_font_size, "italic"))
-        footer.pack_configure(pady=h // 40)
+        footer_font_size = max(10, w // 55)
+        footer.configure(font=("Century Gothic", footer_font_size, "italic"))
 
+    # Initial resize
+    frame.after(100, resize_elements)
     frame.bind("<Configure>", resize_elements)
 
     return frame

@@ -9,7 +9,7 @@ def create_mentor_page(app):
     # Title
     title = tk.Label(
         frame,
-        text="Select Mentors",
+        text="Select Mentor",
         font=("Archivo Black", 40, "bold"),
         fg="#a9c7ff",
         bg="#0b0b23"
@@ -17,7 +17,6 @@ def create_mentor_page(app):
     title.pack(pady=(50, 20))
 
     mentors = [row[2] for row in get_all_mentors()]
-    mentor_vars = []
 
     # Scrollable container
     container = tk.Frame(frame, bg="#0b0b23")
@@ -59,20 +58,45 @@ def create_mentor_page(app):
     )
     toggle_btn.pack(pady=10)
 
-    # Checkboxes
+    # Single selection variable
+    selected_mentor_var = tk.StringVar(value="")  
+
+    # Label to show selected mentor
+    selected_label = tk.Label(
+        frame,
+        text="No mentor selected",
+        font=("Arial", 14, "bold"),
+        fg="white",   # default color
+        bg="#0b0b23"
+    )
+    selected_label.pack(pady=10)
+
+    def update_label(*args):
+        value = selected_mentor_var.get()
+        if value:
+            selected_label.config(text=f"Selected: {value}", fg="lightgreen")
+        else:
+            selected_label.config(text="No mentor selected", fg="white")
+
+    selected_mentor_var.trace_add("write", update_label)
+
+    # Radiobuttons
     if mentors:
         for mentor in mentors:
-            var = tk.BooleanVar()
-            chk = ttk.Checkbutton(scrollable_frame, text=mentor, variable=var)
-            chk.pack(anchor="w", pady=2, padx=10)
-            mentor_vars.append((mentor, var))
+            rbtn = ttk.Radiobutton(
+                scrollable_frame,
+                text=mentor,
+                variable=selected_mentor_var,
+                value=mentor
+            )
+            rbtn.pack(anchor="w", pady=2, padx=10)
     else:
         tk.Label(frame, text="No mentors found", fg="white", bg="#0b0b23").pack(pady=20)
 
     # Save + prepare for API call
     def save_selection():
-        selected = [m for m, v in mentor_vars if v.get()]
-        app.selected_mentors = selected
+        selected = selected_mentor_var.get()
+        app.selected_mentor = selected
         app.selected_group = getattr(app, "selected_group", None)
 
         if not selected:
@@ -80,13 +104,10 @@ def create_mentor_page(app):
             return
 
         print(f"Group: {app.selected_group}")
-        print(f"Mentors selected: {selected}")
+        print(f"Mentor selected: {selected}")
 
         # Placeholder for API call
-        for mentor in selected:
-            print(f"Fetching messages for group={app.selected_group}, mentor={mentor}")
-            # بعدين هنا تستدعي:
-            # app.fetch_messages_for_group_and_mentor(app.selected_group, mentor)
+        print(f"Fetching messages for group={app.selected_group}, mentor={selected}")
 
     save_btn = tk.Button(
         frame,

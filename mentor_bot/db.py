@@ -94,6 +94,7 @@ def add_mentor(user_id, username, full_name, group_id=None):
 def get_all_groups():
     conn = get_connection()
     cursor = conn.cursor()
+<<<<<<< HEAD
     cursor.execute("SELECT * FROM groups")
     groups = cursor.fetchall()
     conn.close()
@@ -137,3 +138,49 @@ def get_group_by_name(name):
     group = cursor.fetchone()
     conn.close()
     return group
+=======
+    try:
+        cursor.execute('SELECT * FROM groups')
+        groups = cursor.fetchall()
+        return groups
+    except Exception as e:
+        print(f"Error getting groups: {e}")
+        return []
+    finally:
+        conn.close()
+        
+def get_mentor_by_name(name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            SELECT user_id, username, full_name 
+            FROM users 
+            WHERE full_name LIKE ? OR username LIKE ?
+        ''', (f'%{name}%', f'%{name}%'))
+        mentors = cursor.fetchall()
+        return mentors
+    except Exception as e:
+        print(f"Error searching mentors: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_group_by_name(group_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+        SELECT group_id, group_name, telegram_id 
+        FROM groups 
+        WHERE group_name LIKE ?
+        ''', (f'%{group_name}%',))
+        group = cursor.fetchone()
+        return group
+    except Exception as e:
+        print(f"Error searching group: {e}")
+        return None
+    finally:
+        conn.close()
+
+>>>>>>> 41f7f9efc813a91880cc0f99b9a4bacbed546575

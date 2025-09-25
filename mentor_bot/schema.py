@@ -8,7 +8,7 @@ cursor.execute('''
 CREATE TABLE IF NOT EXISTS groups (
     group_id INTEGER PRIMARY KEY,
     group_name TEXT NOT NULL,
-    telegram_id TEXT NOT NULL,
+    group_link TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 ''')

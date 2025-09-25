@@ -94,7 +94,7 @@ def add_mentor(user_id, username, full_name, group_id=None):
 def get_all_groups():
     conn = get_connection()
     cursor = conn.cursor()
-<<<<<<< HEAD
+
     cursor.execute("SELECT * FROM groups")
     groups = cursor.fetchall()
     conn.close()
@@ -138,7 +138,7 @@ def get_group_by_name(name):
     group = cursor.fetchone()
     conn.close()
     return group
-=======
+
     try:
         cursor.execute('SELECT * FROM groups')
         groups = cursor.fetchall()

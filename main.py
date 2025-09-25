@@ -1,7 +1,5 @@
 
-# from api.config import client
-# from api.report_generator import export_user_messages, create_weekly_summary
-# import pandas as pd
+#
 
 
 # async def main():
@@ -28,4 +26,5 @@ if __name__ == "__main__":
          root = tk.Tk()
          app = HRTeacherPortal(root)
          root.mainloop()
+
         

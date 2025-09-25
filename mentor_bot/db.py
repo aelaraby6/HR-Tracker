@@ -183,4 +183,4 @@ def get_group_by_name(group_name):
     finally:
         conn.close()
 
->>>>>>> 41f7f9efc813a91880cc0f99b9a4bacbed546575
+

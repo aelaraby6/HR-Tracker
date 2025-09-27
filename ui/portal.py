@@ -12,6 +12,11 @@ from ui.pages.mentor_page import create_mentor_page
 from utils.styles import configure_styles
 from mentor_bot.db import create_tables
 
+import asyncio
+from api.api_call import get_messages
+from api.config import client
+
+
 
 class HRTeacherPortal:
     def __init__(self, root):

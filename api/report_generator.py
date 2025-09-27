@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
+from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
@@ -10,12 +10,22 @@ from api.telegram_utils import fetch_messages
 
 
 # ----- PDF SUMMARY -----
+from datetime import datetime
+
 def create_summary(df: pd.DataFrame, username: str, start_date: datetime, end_date: datetime):
+    if df.empty:
+        print(f"[!] No messages found for @{username} in the given period.")
+        return None
+
     reports_dir = "reports"
     os.makedirs(reports_dir, exist_ok=True)
 
     df['date'] = pd.to_datetime(df['date'])
     df_range = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+
+    if df_range.empty:
+        print(f"[!] No messages in range {start_date.date()} → {end_date.date()}")
+        return None
 
     total_msgs = len(df_range)
     active_days = df_range['date'].dt.date.nunique()
@@ -33,8 +43,14 @@ def create_summary(df: pd.DataFrame, username: str, start_date: datetime, end_da
     plt.savefig(chart_path)
     plt.close()
 
+    # ----- Unique filename with timestamp -----
+    timestamp = datetime.now().strftime("%H%M%S")
+    filename = os.path.join(
+        reports_dir,
+        f"summary_{username}_{start_date.date()}_{end_date.date()}_{timestamp}.pdf"
+    )
+
     # ----- PDF -----
-    filename = os.path.join(reports_dir, f"summary_{username}_{start_date.date()}_{end_date.date()}.pdf")
     c = canvas.Canvas(filename, pagesize=A4)
 
     c.setFont("Helvetica-Bold", 16)
@@ -66,18 +82,22 @@ async def export_user_messages(group: str, target_username: str, client, start_d
     data = []
     for msg in messages_list:
         data.append({
-            "date": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
+            "date": msg.date.strftime("%Y-%m-%d %H:%M:%S") if msg.date else "",
             "sender": target_username,
             "message": msg.text if msg.text else "",
-            "message_id": msg.id
+            "message_id": msg.id if msg.id else None
         })
 
-    df = pd.DataFrame(data)
+    # حتى لو مفيش رسائل، خليه يرجع DataFrame بالأعمدة
+    df = pd.DataFrame(data, columns=["date", "sender", "message", "message_id"])
 
     reports_dir = "reports"
     os.makedirs(reports_dir, exist_ok=True)
 
-    filename = os.path.join(reports_dir, f"messages_{target_username}_{start_date.date()}_{end_date.date()}.xlsx")
+    filename = os.path.join(
+        reports_dir,
+        f"messages_{target_username}_{start_date.date()}_{end_date.date()}.xlsx"
+    )
     df.to_excel(filename, index=False)
 
     print(f"[+] Saved {count} messages for @{target_username} from {start_date.date()} to {end_date.date()} -> {filename}")

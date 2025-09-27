@@ -65,5 +65,7 @@ class HRTeacherPortal:
     def mentor_selected(self, mentor):
         messagebox.showinfo("Mentor Selected", f"You selected: {mentor}")
         self.selected_mentor = mentor
+
+    
         
 

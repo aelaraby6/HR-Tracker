@@ -1,20 +1,22 @@
 # ui/portal.py
+# Handles main app setup and switching between pages.
 import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image
 import os
-import asyncio
-import threading
 
-# Local imports
+# Local imports (relative for package safety)
 from ui.pages.start_page import create_start_page
 from ui.pages.group_page import create_group_page
 from ui.pages.mentor_page import create_mentor_page
 from utils.styles import configure_styles
 from mentor_bot.db import create_tables
 
+import asyncio
 from api.api_call import get_messages
 from api.config import client
+
+
 
 class HRTeacherPortal:
     def __init__(self, root):
@@ -22,11 +24,7 @@ class HRTeacherPortal:
         self.root.title("HR Tracker")
         self.root.geometry("1000x700")
         self.root.configure(bg='#3533cd')
-        
-        # Event loop management
-        self.loop = None
-        self.client_started = False
-        
+
         # Initialize database tables
         try:
             create_tables()
@@ -82,70 +80,6 @@ class HRTeacherPortal:
 
         # Show start page
         self.show_page("start")
-        
-        # Start event loop in background thread
-        self.start_event_loop()
-
-    def start_event_loop(self):
-        """Start asyncio event loop in a separate thread"""
-        def run_loop():
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-            self.loop.run_forever()
-        
-        self.thread = threading.Thread(target=run_loop, daemon=True)
-        self.thread.start()
-
-    async def async_get_messages(self, group, username):
-        """Async method to get messages with proper client management"""
-        try:
-            if not self.client_started:
-                await client.start()
-                self.client_started = True
-                
-            result = await get_messages(group, username)
-            return result
-        except Exception as e:
-            # If there's an error, reset client state
-            self.client_started = False
-            try:
-                await client.disconnect()
-            except:
-                pass
-            raise e
-
-    def run_fetch_data(self, group_url, username):
-        """Run the fetch data function with proper async handling"""
-        try:
-            # Run the async function in the event loop thread
-            future = asyncio.run_coroutine_threadsafe(
-                self.async_get_messages(group_url, username), 
-                self.loop
-            )
-            result = future.result(timeout=300)  # 5 minute timeout
-            return result
-        except Exception as e:
-            # Reset client state on error
-            self.client_started = False
-            # Try to disconnect in the event loop
-            if self.loop and self.loop.is_running():
-                disconnect_future = asyncio.run_coroutine_threadsafe(
-                    self.safe_disconnect(), 
-                    self.loop
-                )
-                try:
-                    disconnect_future.result(timeout=10)
-                except:
-                    pass
-            raise e
-
-    async def safe_disconnect(self):
-        """Safely disconnect the client"""
-        try:
-            await client.disconnect()
-            self.client_started = False
-        except:
-            pass
 
     def show_page(self, page_name):
         """Switch between different pages"""
@@ -162,16 +96,19 @@ class HRTeacherPortal:
         else:
             print(f"Unknown page: {page_name}")
 
-    def group_selected(self, group_display_name):
-        """Handle group selection - group_display_name is the display name"""
-        print(f"Group selected (display): {group_display_name}")
-        print(f"Group link (actual): {self.selected_group}")
+    def group_selected(self, group):
+        """Handle group selection"""
+        print(f"Group selected: {group}")
+        self.selected_group = group
         self.show_page("mentor")
 
     def mentor_selected(self, mentor):
         """Handle mentor selection"""
         print(f"Mentor selected: {mentor}")
         self.selected_mentor = mentor
+
+    
+        
 
     def refresh_mentor_page(self):
         """Refresh mentor page when navigating back"""
@@ -194,14 +131,3 @@ class HRTeacherPortal:
         self.selected_group = None
         self.selected_mentor = None
         self.show_page("start")
-        
-    def cleanup(self):
-        """Cleanup resources when app closes"""
-        if self.loop and self.loop.is_running():
-            # Schedule disconnect and stop loop
-            if self.client_started:
-                asyncio.run_coroutine_threadsafe(
-                    self.safe_disconnect(), 
-                    self.loop
-                )
-            self.loop.call_soon_threadsafe(self.loop.stop)

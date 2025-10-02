@@ -88,7 +88,7 @@ async def export_user_messages(group: str, target_username: str, client, start_d
             "message_id": msg.id if msg.id else None
         })
 
-    # حتى لو مفيش رسائل، خليه يرجع DataFrame بالأعمدة
+
     df = pd.DataFrame(data, columns=["date", "sender", "message", "message_id"])
 
     reports_dir = "reports"

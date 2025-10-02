@@ -1,3 +1,25 @@
 # Ignore secrets
 api/.env
 hr_session.session
+# Python cache and bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+# Virtual environments
+
+.venv/
+# Generated reports and outputs (from your HR-Tracker project)
+reports/
+*.xlsx
+*.pdf
+*.session  # Telegram session files (sensitive - don't commit)
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+# OS generated files
+.DS_Store
+Thumbs.db

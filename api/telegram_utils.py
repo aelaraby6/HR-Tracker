@@ -16,4 +16,4 @@ async def fetch_messages(group, target_username, start_date=None, end_date=None)
             count += 1
             messages_list.append(message)
 
-    return count, messages_list
+    return count, messages_list 

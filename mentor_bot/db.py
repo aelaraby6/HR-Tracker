@@ -1,28 +1,25 @@
-
 import sqlite3
 
 DB_NAME = "mentor_bot.db"  
 
 def get_connection():
-   
     return sqlite3.connect(DB_NAME)
 
 def create_tables():
-    
     conn = get_connection()
     cursor = conn.cursor()
 
-    
+    # Groups table: Changed 'telegram_id' to 'telegram_link' for consistency with schema.py
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS groups (
         group_id INTEGER PRIMARY KEY,
         group_name TEXT NOT NULL,
-        telegram_id TEXT NOT NULL,
+        telegram_link TEXT NOT NULL, -- Changed from telegram_id
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
-  
+    # Users table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
@@ -34,7 +31,7 @@ def create_tables():
     )
     ''')
 
- 
+    # Messages table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS messages (
         message_id INTEGER PRIMARY KEY,
@@ -47,7 +44,7 @@ def create_tables():
     )
     ''')
 
-   
+    # Reports table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS reports (
         report_id INTEGER PRIMARY KEY,
@@ -66,14 +63,14 @@ def create_tables():
     conn.close()
 
 
-def add_group(group_id, group_name, telegram_id):
+def add_group(group_id, group_name, telegram_link): # Parameter name changed
     conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute('''
-        INSERT OR REPLACE INTO groups (group_id, group_name, telegram_id)
+        INSERT OR REPLACE INTO groups (group_id, group_name, telegram_link) -- Column name changed
         VALUES (?, ?, ?)
-        ''', (group_id, group_name, telegram_id))
+        ''', (group_id, group_name, telegram_link))
         conn.commit()
     finally:
         conn.close()
@@ -94,7 +91,6 @@ def add_mentor(user_id, username, full_name, group_id=None):
 def get_all_groups():
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM groups")
     groups = cursor.fetchall()
     conn.close()
@@ -109,7 +105,6 @@ def get_all_mentors():
     return mentors
 
 def get_mentors_for_group(group_name):
-   
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -123,31 +118,34 @@ def get_mentors_for_group(group_name):
     conn.close()
     return mentors
 
-def get_mentor_by_name(name):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE full_name LIKE ?", (f"%{name}%",))
-    mentors = cursor.fetchall()
-    conn.close()
-    return mentors
+# This function is duplicated, keeping the more robust one below
+# def get_mentor_by_name(name):
+#     conn = get_connection()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT * FROM users WHERE full_name LIKE ?", (f"%{name}%",))
+#     mentors = cursor.fetchall()
+#     conn.close()
+#     return mentors
 
-def get_group_by_name(name):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM groups WHERE group_name LIKE ?", (f"%{name}%",))
-    group = cursor.fetchone()
-    conn.close()
-    return group
+# This function is duplicated, keeping the more robust one below
+# def get_group_by_name(name):
+#     conn = get_connection()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT * FROM groups WHERE group_name LIKE ?", (f"%{name}%",))
+#     group = cursor.fetchone()
+#     conn.close()
+#     return group
 
-    try:
-        cursor.execute('SELECT * FROM groups')
-        groups = cursor.fetchall()
-        return groups
-    except Exception as e:
-        print(f"Error getting groups: {e}")
-        return []
-    finally:
-        conn.close()
+# This try-except block was misplaced, removing it.
+# try:
+#     cursor.execute('SELECT * FROM groups')
+#     groups = cursor.fetchall()
+#     return groups
+# except Exception as e:
+#     print(f"Error getting groups: {e}")
+#     return []
+# finally:
+#     conn.close()
         
 def get_mentor_by_name(name):
     conn = get_connection()
@@ -171,7 +169,7 @@ def get_group_by_name(group_name):
     cursor = conn.cursor()
     try:
         cursor.execute('''
-        SELECT group_id, group_name, telegram_id 
+        SELECT group_id, group_name, telegram_link -- Column name changed
         FROM groups 
         WHERE group_name LIKE ?
         ''', (f'%{group_name}%',))
@@ -182,5 +180,3 @@ def get_group_by_name(group_name):
         return None
     finally:
         conn.close()
-
-

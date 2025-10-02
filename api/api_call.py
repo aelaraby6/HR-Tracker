@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import asyncio
 
 
-async def get_messages(group,target_username):
+async def get_messages(group, target_username):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=7)
 
@@ -15,9 +15,9 @@ async def get_messages(group,target_username):
     )
 
     # Generate PDF Summary
-    create_summary(df, target_username, start_date, end_date)
-
-
+    pdf_path = create_summary(df, target_username, start_date, end_date)
+    
+    return filename, count, pdf_path
 # if __name__ == "__main__":
 #     with client:
 #         client.loop.run_until_complete(main())

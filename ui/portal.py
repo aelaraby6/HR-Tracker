@@ -51,6 +51,7 @@ class HRTeacherPortal:
 
         # Store selected group and mentor
         self.selected_group = None
+        self.selected_group_display = None # Added to store display name
         self.selected_mentor = None
 
         # ---------- Logo for Title Bar ----------
@@ -86,6 +87,9 @@ class HRTeacherPortal:
         # Start event loop in background thread
         self.start_event_loop()
 
+        # Bind the cleanup function to the window close event
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
     def start_event_loop(self):
         """Start asyncio event loop in a separate thread"""
         def run_loop():
@@ -96,22 +100,28 @@ class HRTeacherPortal:
         self.thread = threading.Thread(target=run_loop, daemon=True)
         self.thread.start()
 
-    async def async_get_messages(self, group, username):
+    async def async_get_messages(self, group, target_username): # Renamed username to target_username for clarity
         """Async method to get messages with proper client management"""
         try:
             if not self.client_started:
+                print("Client not started, attempting to connect...")
                 await client.start()
                 self.client_started = True
-                
-            result = await get_messages(group, username)
+                print("Client connected.")
+            
+            print(f"Fetching messages for group: {group}, user: {target_username}")
+            result = await get_messages(group, target_username)
             return result
         except Exception as e:
+            print(f"Error in async_get_messages: {e}")
             # If there's an error, reset client state
             self.client_started = False
             try:
+                # Attempt to disconnect gracefully in case of error
                 await client.disconnect()
-            except:
-                pass
+                print("Client disconnected due to error.")
+            except Exception as disconnect_e:
+                print(f"Error during client disconnect after failure: {disconnect_e}")
             raise e
 
     def run_fetch_data(self, group_url, username):
@@ -124,7 +134,11 @@ class HRTeacherPortal:
             )
             result = future.result(timeout=300)  # 5 minute timeout
             return result
+        except asyncio.TimeoutError:
+            print("Fetch data timed out.")
+            raise Exception("Telegram API call timed out. Please check your internet connection or API credentials.")
         except Exception as e:
+            print(f"Error in run_fetch_data: {e}")
             # Reset client state on error
             self.client_started = False
             # Try to disconnect in the event loop
@@ -135,17 +149,19 @@ class HRTeacherPortal:
                 )
                 try:
                     disconnect_future.result(timeout=10)
-                except:
-                    pass
+                except Exception as disconnect_e:
+                    print(f"Error during client disconnect in run_fetch_data error handling: {disconnect_e}")
             raise e
 
     async def safe_disconnect(self):
         """Safely disconnect the client"""
         try:
-            await client.disconnect()
-            self.client_started = False
-        except:
-            pass
+            if client.is_connected():
+                await client.disconnect()
+                self.client_started = False
+                print("Client safely disconnected.")
+        except Exception as e:
+            print(f"Error during safe_disconnect: {e}")
 
     def show_page(self, page_name):
         """Switch between different pages"""
@@ -192,16 +208,30 @@ class HRTeacherPortal:
     def go_home(self):
         """Navigate to home page"""
         self.selected_group = None
+        self.selected_group_display = None # Reset display name too
         self.selected_mentor = None
         self.show_page("start")
         
     def cleanup(self):
         """Cleanup resources when app closes"""
+        print("Performing application cleanup...")
         if self.loop and self.loop.is_running():
             # Schedule disconnect and stop loop
             if self.client_started:
+                print("Scheduling client disconnect...")
                 asyncio.run_coroutine_threadsafe(
                     self.safe_disconnect(), 
                     self.loop
                 )
+            print("Stopping asyncio event loop...")
             self.loop.call_soon_threadsafe(self.loop.stop)
+            self.thread.join(timeout=5) # Wait for the thread to finish
+            if self.thread.is_alive():
+                print("Warning: Asyncio thread did not terminate gracefully.")
+        print("Cleanup complete.")
+
+    def on_closing(self):
+        """Handler for window close event"""
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.cleanup()
+            self.root.destroy()

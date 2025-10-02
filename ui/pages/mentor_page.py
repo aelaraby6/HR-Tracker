@@ -2,8 +2,12 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
+import asyncio
+from datetime import datetime, timedelta
 
 from mentor_bot.db import get_all_mentors
+from api.config import client
+from api.report_generator import export_user_messages, create_summary
 
 def create_mentor_page(app):
     frame = tk.Frame(app.root, bg="#0b0b23")
@@ -26,12 +30,14 @@ def create_mentor_page(app):
         # row could be (id, telegram_username, display_name) or another order
         # Try to extract a human display name at possible positions
         display = None
-        for idx in (2, 1, 0):
-            if idx < len(row) and row[idx]:
-                # prefer position 2 or 1 if it's a string longer than 1 char
-                if isinstance(row[idx], str) and len(row[idx].strip()) > 0:
-                    display = row[idx].strip()
-                    break
+        # Prioritize full_name (index 2), then username (index 1)
+        if len(row) > 2 and row[2] and isinstance(row[2], str) and len(row[2].strip()) > 0:
+            display = row[2].strip()
+        elif len(row) > 1 and row[1] and isinstance(row[1], str) and len(row[1].strip()) > 0:
+            display = row[1].strip()
+        elif len(row) > 0 and row[0] and isinstance(row[0], str) and len(row[0].strip()) > 0:
+            display = row[0].strip() # Fallback to ID if it's a string
+
         if display:
             mentors.append((display, row))
     # De-duplicate by display name
@@ -115,7 +121,7 @@ def create_mentor_page(app):
             )
             rbtn.pack(anchor="w", pady=2, padx=10)
     else:
-        tk.Label(frame, text="No mentors found", fg="white", bg="#0b0b23").pack(pady=20)
+        tk.Label(scrollable_frame, text="No mentors found", fg="white", bg="#0b0b23").pack(pady=20)
 
     # ---- Mentor detail window ----
     def open_mentor_window(selected_display):
@@ -139,22 +145,16 @@ def create_mentor_page(app):
         lbl_name.pack(pady=(20, 10))
 
         # Display selected group info
-        group_info = tk.Label(win, text=f"Group: {app.selected_group}", font=("Arial", 12), fg="#a9c7ff", bg="#1b2138")
+        group_info = tk.Label(win, text=f"Group: {app.selected_group_display}", font=("Arial", 12), fg="#a9c7ff", bg="#1b2138")
         group_info.pack(pady=(0, 20))
 
         # Try to extract a telegram username from the row (common positions)
         suggested_username = ""
         if db_row:
             # look for a likely username: a string that starts with letter/number and maybe has @
-            for val in db_row:
-                if isinstance(val, str) and val.strip():
-                    v = val.strip()
-                    # a quick heuristic: username often without spaces and shorter than 64 chars
-                    if " " not in v and len(v) < 64:
-                        # ignore numeric id-looking values
-                        if not v.isdigit():
-                            suggested_username = v
-                            break
+            # Assuming username is at index 1 in the DB row (user_id, username, full_name, ...)
+            if len(db_row) > 1 and isinstance(db_row[1], str) and db_row[1].strip():
+                suggested_username = db_row[1].strip()
 
         lbl_username = tk.Label(win, text="Telegram username (without @):", fg="white", bg="#1b2138", font=("Arial", 11))
         lbl_username.pack(pady=(10, 0))
@@ -164,7 +164,8 @@ def create_mentor_page(app):
         
         entry_username = tk.Entry(entry_frame, width=40, font=("Arial", 12))
         entry_username.pack(side="left", padx=(0, 10))
-        entry_username.insert(0, suggested_username)
+        if suggested_username:
+            entry_username.insert(0, suggested_username)
         
         # Auto-detect button
         def auto_detect_username():
@@ -173,7 +174,7 @@ def create_mentor_page(app):
                 entry_username.insert(0, suggested_username)
                 messagebox.showinfo("Auto-detected", f"Using username: {suggested_username}")
             else:
-                messagebox.showinfo("No username found", "No username could be auto-detected from database.")
+                messagebox.showinfo("No username found", "No username could be auto-detected from database for this mentor.")
         
         auto_btn = tk.Button(entry_frame, text="Auto-detect", command=auto_detect_username,
                            bg="#6c757d", fg="white", font=("Arial", 10), padx=10)
@@ -229,48 +230,89 @@ def create_mentor_page(app):
 
             # Run the fetch in a separate thread to avoid blocking Tk mainloop
             def target_thread():
+                filename = "N/A"
+                count = 0
+                pdf_path = "N/A"
                 try:
                     # Update status in UI thread
-                    def update_status(message):
-                        status_label.config(text=message)
+                    def update_status(message, color="white"):
+                        status_label.config(text=message, fg=color)
                         result_text.config(state="normal")
                         result_text.insert(tk.END, f"{message}\n")
                         result_text.see(tk.END)
                         result_text.config(state="disabled")
                     
-                    win.after(0, lambda: update_status("🔍 Connecting to Telegram..."))
+                    win.after(0, lambda: update_status("🔍 Connecting to Telegram...", "yellow"))
                     
-                    # Use the app's run_fetch_data method
-                    if hasattr(app, 'run_fetch_data'):
-                        win.after(0, lambda: update_status("📡 Fetching messages..."))
-                        
-                        # This will call the portal's run_fetch_data method
-                        result = app.run_fetch_data(app.selected_group, username)
-                        
-                        # on success
-                        win.after(0, lambda: update_status("✅ Fetch completed successfully!"))
-                        win.after(0, lambda: update_status(f"📊 Group: {app.selected_group}"))
-                        win.after(0, lambda: update_status(f"👤 Mentor: {username}"))
-                        win.after(0, lambda: update_status("💾 Reports saved in 'reports' folder"))
-                        
-                        win.after(0, lambda: status_label.config(text="Done! Check 'reports' folder", fg="lightgreen"))
-                        win.after(0, lambda: messagebox.showinfo("Done", "Reports generated successfully!\nCheck the 'reports' folder."))
-                        
+                    # Use the main application's client in a thread-safe way
+                    # The portal's run_fetch_data already handles the asyncio loop and client connection
+                    
+                    win.after(0, lambda: update_status("📡 Fetching messages from last 7 days...", "yellow"))
+                    
+                    end_date = datetime.now()
+                    start_date = end_date - timedelta(days=7)
+                    
+                    # Call your API function via the portal's async runner
+                    filename, count, df = app.run_fetch_data(
+                        app.selected_group, 
+                        username
+                    )
+                    
+                    win.after(0, lambda: update_status(f"✅ Fetched {count} messages", "lightgreen"))
+                    win.after(0, lambda: update_status(f"💾 Excel file: {filename}", "lightgreen"))
+                    
+                    # Generate PDF summary
+                    win.after(0, lambda: update_status("📊 Generating PDF summary...", "yellow"))
+                    temp_pdf_path = create_summary(df, username, start_date, end_date)
+                    
+                    if temp_pdf_path:
+                        pdf_path = temp_pdf_path
+                        win.after(0, lambda: update_status(f"📄 PDF summary: {pdf_path}", "lightgreen"))
+                        win.after(0, lambda: update_status("🎉 Reports generated successfully!", "lightgreen"))
                     else:
-                        raise Exception("Fetch functionality not available")
+                        win.after(0, lambda: update_status("⚠️ No messages found in the specified range for PDF summary. PDF not generated.", "orange"))
+                        pdf_path = "N/A (No messages in range)" # Set a placeholder for the message box
+                    
+                    # Success updates
+                    win.after(0, lambda: update_status(f"📊 Group: {app.selected_group_display}", "white"))
+                    win.after(0, lambda: update_status(f"👤 Mentor: {username}", "white"))
+                    win.after(0, lambda: update_status(f"💾 Excel: {filename}", "white"))
+                    win.after(0, lambda: update_status(f"📄 PDF: {pdf_path}", "white"))
+                    win.after(0, lambda: update_status("✅ All reports saved in 'reports' folder", "lightgreen"))
+                    
+                    win.after(0, lambda: status_label.config(text="Done! Check 'reports' folder", fg="lightgreen"))
+                    
+                    # Success message
+                    def show_success_messagebox():
+                        messagebox.showinfo("Done", 
+                            f"Reports generated successfully!\n"
+                            f"• {count} messages processed\n"
+                            f"• Excel: {filename}\n"
+                            f"• PDF: {pdf_path}")
+                    
+                    win.after(0, show_success_messagebox)
 
                 except Exception as e:
                     error_msg = f"❌ Error: {str(e)}"
-                    win.after(0, lambda: status_label.config(text=error_msg, fg="red"))
-                    win.after(0, lambda: result_text.config(state="normal"))
-                    win.after(0, lambda: result_text.insert(tk.END, f"{error_msg}\n"))
-                    win.after(0, lambda: result_text.see(tk.END))
-                    win.after(0, lambda: result_text.config(state="disabled"))
-                    win.after(0, lambda: messagebox.showerror("Error", f"Failed to fetch/generate:\n{str(e)}"))
+                    print(f"Error during report generation: {e}")
+                    
+                    # Create a function to handle error display
+                    def show_error_ui():
+                        status_label.config(text=error_msg, fg="red")
+                        result_text.config(state="normal")
+                        result_text.insert(tk.END, f"{error_msg}\n")
+                        result_text.see(tk.END)
+                        result_text.config(state="disabled")
+                        messagebox.showerror("Error", f"Failed to fetch/generate reports:\n{error_msg}")
+                    
+                    win.after(0, show_error_ui)
                     
                 finally:
-                    win.after(0, lambda: fetch_btn.config(state="normal"))
-                    win.after(0, lambda: auto_btn.config(state="normal"))
+                    def enable_buttons():
+                        fetch_btn.config(state="normal")
+                        auto_btn.config(state="normal")
+                    
+                    win.after(0, enable_buttons)
 
             t = threading.Thread(target=target_thread, daemon=True)
             t.start()
@@ -309,7 +351,10 @@ def create_mentor_page(app):
         
         def open_new_mentor():
             win.destroy()
-            save_selection()
+            # No need to call save_selection here, just close and let user re-select
+            # save_selection() 
+            # The user will be back on the mentor selection page
+            pass 
 
         new_mentor_btn = tk.Button(nav_frame, text="👥 Select Different Mentor", command=open_new_mentor,
                                   bg="#17a2b8", fg="white", font=("Arial", 10), 
@@ -329,7 +374,7 @@ def create_mentor_page(app):
             messagebox.showwarning("No group", "Please go back and select a group first.")
             return
 
-        print(f"Group: {app.selected_group}")
+        print(f"Group: {app.selected_group_display} (Link: {app.selected_group})")
         print(f"Mentor selected: {selected}")
 
         # Open detail window for the mentor

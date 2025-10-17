@@ -1,5 +1,7 @@
 # HR Tracker
 
+<img width="1024" height="1024" alt="ChatGPT Image Sep 8, 2025, 03_51_57 PM" src="https://github.com/user-attachments/assets/1bf189ce-c003-4b68-9831-db34354a8125" />
+
 **HR Tracker** is a desktop application built with **Python, Tkinter, and SQLite** that helps the HR team at **ICPC Zagazig Community** track and analyze group activities.
 
 The app connects to the **Telegram API** to fetch group messages, organize them by **mentor and group**, and then generate both **Excel sheets** and **PDF summary reports** for easy review.
